@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BetWarrior · Panel de Afiliados</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0f0f0f;color:#f0f0f0;font-family:'DM Sans',system-ui,sans-serif;font-size:14px;}
+  select{background:#222;color:#f0f0f0;border:1px solid #2e2e2e;border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;}
+  button{cursor:pointer;font-family:inherit;}
+  canvas{display:block;}
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:#1a1a1a;}
+  ::-webkit-scrollbar-thumb{background:#2e2e2e;border-radius:3px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const PASSWORD = "BW2026";
+const MONTHS = ["November 2025","December 2025","January 2026","February 2026","March 2026","April 2026"];
+const SHORT  = {"November 2025":"Nov '25","December 2025":"Dic '25","January 2026":"Ene '26","February 2026":"Feb '26","March 2026":"Mar '26","April 2026":"Abr '26 MTD"};
+const MO_ES  = {"November 2025":"Noviembre 2025","December 2025":"Diciembre 2025","January 2026":"Enero 2026","February 2026":"Febrero 2026","March 2026":"Marzo 2026","April 2026":"Abril 2026 (MTD)"};
+const BRAND_SHORT = {"BetWarrior Argentina":"ARG","BetWarrior Brazil":"BRA","BetWarrior Peru":"PER","BetWarrior International":"INT"};
+const BRANDS = ["BetWarrior Argentina","BetWarrior Brazil","BetWarrior Peru","BetWarrior International"];
+const BCOLS  = {"BetWarrior Brazil":"#E84200","BetWarrior Argentina":"#3b82f6","BetWarrior Peru":"#22c55e","BetWarrior International":"#a855f7"};
+
+const MONTHLY = {
+  "November 2025": {cl:16053,  sg:1466,ft:723, dep:139875,ng:26589,co:19220},
+  "December 2025": {cl:13676,  sg:1047,ft:356, dep:151601,ng:26029,co:10354},
+  "January 2026":  {cl:17797,  sg:1341,ft:425, dep:77058, ng:25694,co:9664},
+  "February 2026": {cl:21635,  sg:998, ft:263, dep:73439, ng:26914,co:8757},
+  "March 2026":    {cl:1316212,sg:1753,ft:423, dep:77925, ng:26023,co:8971},
+  "April 2026":    {cl:409013, sg:2793,ft:1080,dep:61851, ng:24126,co:7392},
+};
+const BY_BRAND = {
+  "BetWarrior Brazil":        {cl:37982,sg:7613,ft:2546,dep:302267,ng:65730, co:54865},
+  "BetWarrior Argentina":     {cl:28408,sg:1623,ft:654, dep:249907,ng:91215, co:9667},
+  "BetWarrior Peru":          {cl:14015,sg:157, ft:55,  dep:17492, ng:-1863, co:-228},
+  "BetWarrior International": {cl:4830, sg:4,   ft:15,  dep:12084, ng:291,   co:0},
+};
+const DATA = {
+"November 2025":[
+  {aff:"costamedia",        ch:"BetWarrior Brazil",       cl:2560,   sg:494, ft:231,dep:52149, ng:18461,co:14326},
+  {aff:"AfiliagamblingBR",  ch:"BetWarrior Brazil",       cl:3463,   sg:328, ft:224,dep:11712, ng:1732, co:3600},
+  {aff:"Player7777",        ch:"BetWarrior Brazil",       cl:582,    sg:65,  ft:61, dep:4706,  ng:2297, co:351},
+  {aff:"raphaelrossi",      ch:"BetWarrior Brazil",       cl:942,    sg:100, ft:39, dep:4152,  ng:304,  co:960},
+  {aff:"apuestasfree_arg",  ch:"BetWarrior Argentina",    cl:35,     sg:60,  ft:30, dep:1222,  ng:330,  co:700},
+  {aff:"NorhstarBR",        ch:"BetWarrior Brazil",       cl:845,    sg:109, ft:28, dep:6914,  ng:2669, co:960},
+  {aff:"EonF_Holding",      ch:"BetWarrior Brazil",       cl:6,      sg:66,  ft:25, dep:23322, ng:6352, co:689},
+  {aff:"apuestasfree",      ch:"BetWarrior Peru",         cl:21,     sg:31,  ft:20, dep:4554,  ng:115,  co:450},
+  {aff:"NorthstarARG",      ch:"BetWarrior Argentina",    cl:906,    sg:77,  ft:17, dep:4637,  ng:-725, co:300},
+  {aff:"eightroom_Brasil25",ch:"BetWarrior Brazil",       cl:115,    sg:18,  ft:16, dep:343,   ng:-149, co:450},
+  {aff:"BCPLAY25AR",        ch:"BetWarrior Argentina",    cl:737,    sg:26,  ft:11, dep:2232,  ng:260,  co:175},
+  {aff:"BWAstropay",        ch:"BetWarrior Argentina",    cl:18,     sg:1,   ft:7,  dep:18323, ng:7064, co:0},
+  {aff:"BCGLC25AR",         ch:"BetWarrior Argentina",    cl:580,    sg:21,  ft:4,  dep:510,   ng:463,  co:75},
+  {aff:"LeadstarPE",        ch:"BetWarrior Peru",         cl:18,     sg:3,   ft:4,  dep:265,   ng:111,  co:50},
+  {aff:"ALPE01",            ch:"BetWarrior Peru",         cl:972,    sg:19,  ft:4,  dep:726,   ng:192,  co:-117},
+  {aff:"BCGLC24",           ch:"BetWarrior International",cl:14,     sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"bclone",            ch:"BetWarrior International",cl:119,    sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"Spikeup",           ch:"BetWarrior Peru",         cl:42,     sg:4,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"365Scores",         ch:"BetWarrior Argentina",    cl:402,    sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"JoaquinC",          ch:"BetWarrior International",cl:4795,   sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+],
+"December 2025":[
+  {aff:"costamedia",        ch:"BetWarrior Brazil",       cl:2508,   sg:418, ft:158,dep:83658, ng:12428,co:6402},
+  {aff:"raphaelrossi",      ch:"BetWarrior Brazil",       cl:1230,   sg:235, ft:45, dep:5316,  ng:1142, co:1487},
+  {aff:"AfiliagamblingBR",  ch:"BetWarrior Brazil",       cl:314,    sg:29,  ft:28, dep:2258,  ng:-539, co:480},
+  {aff:"NorhstarBR",        ch:"BetWarrior Brazil",       cl:1165,   sg:148, ft:26, dep:4345,  ng:-799, co:450},
+  {aff:"apuestasfree_arg",  ch:"BetWarrior Argentina",    cl:13,     sg:33,  ft:20, dep:1086,  ng:566,  co:450},
+  {aff:"eightroom_Brasil25",ch:"BetWarrior Brazil",       cl:95,     sg:21,  ft:19, dep:465,   ng:13,   co:570},
+  {aff:"NorthstarARG",      ch:"BetWarrior Argentina",    cl:733,    sg:22,  ft:13, dep:4458,  ng:2513, co:250},
+  {aff:"apuestasfree",      ch:"BetWarrior Peru",         cl:7,      sg:28,  ft:12, dep:5764,  ng:86,   co:344},
+  {aff:"EonF_Holding",      ch:"BetWarrior Peru",         cl:22,     sg:5,   ft:9,  dep:17180, ng:-1940,co:-1310},
+  {aff:"BWAstropay",        ch:"BetWarrior Argentina",    cl:5,      sg:0,   ft:6,  dep:17434, ng:6825, co:0},
+  {aff:"BCPLAY25AR",        ch:"BetWarrior Argentina",    cl:498,    sg:16,  ft:5,  dep:3597,  ng:1259, co:125},
+  {aff:"BCGLC25AR",         ch:"BetWarrior Argentina",    cl:494,    sg:12,  ft:3,  dep:378,   ng:345,  co:50},
+  {aff:"LeadstarPE",        ch:"BetWarrior Peru",         cl:276,    sg:18,  ft:3,  dep:303,   ng:41,   co:50},
+  {aff:"ALPE01",            ch:"BetWarrior Peru",         cl:965,    sg:19,  ft:3,  dep:779,   ng:1274, co:316},
+  {aff:"taboola",           ch:"BetWarrior Argentina",    cl:0,      sg:0,   ft:1,  dep:472,   ng:236,  co:0},
+  {aff:"365Scores",         ch:"BetWarrior Argentina",    cl:783,    sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"Spikeup",           ch:"BetWarrior Peru",         cl:340,    sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"BCGLC24",           ch:"BetWarrior International",cl:22,     sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+],
+"January 2026":[
+  {aff:"AfiliagamblingBR",  ch:"BetWarrior Brazil",       cl:987,    sg:156, ft:112,dep:4099,  ng:194,  co:1110},
+  {aff:"costamedia",        ch:"BetWarrior Brazil",       cl:2354,   sg:331, ft:79, dep:28855, ng:10305,co:4975},
+  {aff:"365Scores",         ch:"BetWarrior Argentina",    cl:4504,   sg:114, ft:60, dep:618,   ng:188,  co:56},
+  {aff:"apuestasfree_arg",  ch:"BetWarrior Argentina",    cl:17,     sg:37,  ft:26, dep:1532,  ng:762,  co:600},
+  {aff:"raphaelrossi",      ch:"BetWarrior Argentina",    cl:1612,   sg:240, ft:23, dep:1344,  ng:98,   co:420},
+  {aff:"NorthstarARG",      ch:"BetWarrior Argentina",    cl:956,    sg:30,  ft:17, dep:5703,  ng:4106, co:325},
+  {aff:"LeadstarPE",        ch:"BetWarrior Peru",         cl:1296,   sg:129, ft:12, dep:251,   ng:39,   co:175},
+  {aff:"NorhstarBR",        ch:"BetWarrior Brazil",       cl:966,    sg:123, ft:12, dep:1808,  ng:-706, co:240},
+  {aff:"Player7777",        ch:"BetWarrior Brazil",       cl:317,    sg:28,  ft:11, dep:205,   ng:-152, co:-53},
+  {aff:"eightroom_Brasil25",ch:"BetWarrior Brazil",       cl:107,    sg:16,  ft:11, dep:481,   ng:103,  co:330},
+  {aff:"EonF_Holding",      ch:"BetWarrior Peru",         cl:11,     sg:1,   ft:10, dep:8752,  ng:1210, co:-147},
+  {aff:"apuestasfree",      ch:"BetWarrior Peru",         cl:16,     sg:30,  ft:10, dep:2384,  ng:1490, co:598},
+  {aff:"EightroomBR2",      ch:"BetWarrior Brazil",       cl:196,    sg:34,  ft:9,  dep:1707,  ng:555,  co:322},
+  {aff:"northstar",         ch:"BetWarrior Peru",         cl:176,    sg:14,  ft:6,  dep:258,   ng:236,  co:227},
+  {aff:"Spikeup",           ch:"BetWarrior Peru",         cl:938,    sg:26,  ft:6,  dep:85,    ng:25,   co:51},
+  {aff:"BCGLC24",           ch:"BetWarrior International",cl:18,     sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+],
+"February 2026":[
+  {aff:"costamedia",        ch:"BetWarrior Brazil",       cl:2952,   sg:314, ft:68, dep:24310, ng:8104, co:3897},
+  {aff:"raphaelrossi",      ch:"BetWarrior Brazil",       cl:7714,   sg:258, ft:38, dep:2269,  ng:411,  co:944},
+  {aff:"AfiliagamblingBR",  ch:"BetWarrior Brazil",       cl:641,    sg:80,  ft:35, dep:1255,  ng:-276, co:570},
+  {aff:"apuestasfree_arg",  ch:"BetWarrior Argentina",    cl:15,     sg:48,  ft:23, dep:2141,  ng:1018, co:475},
+  {aff:"eightroom_Brasil25",ch:"BetWarrior Brazil",       cl:173,    sg:30,  ft:22, dep:973,   ng:-10,  co:630},
+  {aff:"Spikeup",           ch:"BetWarrior Peru",         cl:730,    sg:27,  ft:11, dep:2753,  ng:384,  co:195},
+  {aff:"LeadstarPE",        ch:"BetWarrior Argentina",    cl:869,    sg:84,  ft:9,  dep:117,   ng:28,   co:150},
+  {aff:"northstar",         ch:"BetWarrior Peru",         cl:209,    sg:17,  ft:9,  dep:2228,  ng:1965, co:692},
+  {aff:"BCPLAY25AR",        ch:"BetWarrior Argentina",    cl:914,    sg:20,  ft:8,  dep:2677,  ng:718,  co:125},
+  {aff:"NorthstarARG",      ch:"BetWarrior Argentina",    cl:715,    sg:9,   ft:6,  dep:4297,  ng:2673, co:50},
+  {aff:"EightroomBR2",      ch:"BetWarrior Brazil",       cl:141,    sg:33,  ft:6,  dep:766,   ng:8,    co:90},
+  {aff:"365Scores",         ch:"BetWarrior Argentina",    cl:1381,   sg:7,   ft:5,  dep:843,   ng:466,  co:60},
+  {aff:"apuestasfree",      ch:"BetWarrior Peru",         cl:14,     sg:22,  ft:5,  dep:873,   ng:431,  co:175},
+  {aff:"BCGLC25AR",         ch:"BetWarrior Argentina",    cl:649,    sg:10,  ft:4,  dep:228,   ng:197,  co:75},
+  {aff:"EonF_Holding",      ch:"BetWarrior International",cl:0,      sg:1,   ft:4,  dep:7283,  ng:3019, co:473},
+  {aff:"BCGLC24",           ch:"BetWarrior International",cl:21,     sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+],
+"March 2026":[
+  {aff:"AfiliagamblingBR",  ch:"BetWarrior Brazil",       cl:834,    sg:126, ft:91, dep:2630,  ng:390,  co:1903},
+  {aff:"costamedia",        ch:"BetWarrior Brazil",       cl:2939,   sg:283, ft:65, dep:10770, ng:1331, co:2200},
+  {aff:"raphaelrossi",      ch:"BetWarrior Argentina",    cl:6708,   sg:616, ft:64, dep:1908,  ng:8,    co:1680},
+  {aff:"apuestasfree_arg",  ch:"BetWarrior Argentina",    cl:17,     sg:52,  ft:32, dep:1903,  ng:1113, co:650},
+  {aff:"nfa",               ch:"BetWarrior Brazil",       cl:317,    sg:56,  ft:25, dep:169,   ng:-29,  co:0},
+  {aff:"dbbtwar",           ch:"BetWarrior Brazil",       cl:432,    sg:76,  ft:23, dep:476,   ng:245,  co:103},
+  {aff:"EightroomBR2",      ch:"BetWarrior Brazil",       cl:563,    sg:111, ft:21, dep:3901,  ng:973,  co:349},
+  {aff:"LeadstarPE",        ch:"BetWarrior Argentina",    cl:1717,   sg:158, ft:20, dep:509,   ng:499,  co:325},
+  {aff:"Spikeup",           ch:"BetWarrior Peru",         cl:335,    sg:45,  ft:19, dep:269,   ng:222,  co:416},
+  {aff:"eightroom_Brasil25",ch:"BetWarrior Brazil",       cl:95,     sg:11,  ft:12, dep:488,   ng:-108, co:360},
+  {aff:"BCPLAY25AR",        ch:"BetWarrior Argentina",    cl:1054,   sg:22,  ft:7,  dep:2713,  ng:818,  co:175},
+  {aff:"Asaph",             ch:"BetWarrior Brazil",       cl:1250419,sg:81,  ft:7,  dep:34,    ng:34,   co:0},
+  {aff:"NorthstarARG",      ch:"BetWarrior Argentina",    cl:683,    sg:10,  ft:6,  dep:8037,  ng:-767, co:150},
+  {aff:"NorhstarBR",        ch:"BetWarrior Brazil",       cl:181,    sg:19,  ft:5,  dep:1238,  ng:526,  co:233},
+  {aff:"BCGLC25AR",         ch:"BetWarrior Argentina",    cl:716,    sg:17,  ft:4,  dep:236,   ng:28,   co:100},
+  {aff:"BCGLC24",           ch:"BetWarrior International",cl:19,     sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"365Scores",         ch:"BetWarrior Argentina",    cl:1402,   sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+],
+"April 2026":[
+  {aff:"nfa",               ch:"BetWarrior Brazil",       cl:8585,   sg:1177,ft:709,dep:3700,  ng:497,  co:0},
+  {aff:"Spikeup",           ch:"BetWarrior Peru",         cl:1142,   sg:170, ft:77, dep:1005,  ng:876,  co:1525},
+  {aff:"AfiliagamblingBR",  ch:"BetWarrior Brazil",       cl:509,    sg:73,  ft:51, dep:1042,  ng:372,  co:748},
+  {aff:"EightroomBR2",      ch:"BetWarrior Brazil",       cl:976,    sg:167, ft:42, dep:8194,  ng:2787, co:957},
+  {aff:"apuestasfree_arg",  ch:"BetWarrior Argentina",    cl:30,     sg:61,  ft:38, dep:2829,  ng:36,   co:825},
+  {aff:"raphaelrossi",      ch:"BetWarrior Brazil",       cl:2800,   sg:398, ft:17, dep:516,   ng:-144, co:351},
+  {aff:"Asaph",             ch:"BetWarrior Brazil",       cl:385859, sg:307, ft:17, dep:314,   ng:-256, co:85},
+  {aff:"costamedia",        ch:"BetWarrior Brazil",       cl:1722,   sg:89,  ft:14, dep:7418,  ng:1631, co:631},
+  {aff:"LeadstarPE",        ch:"BetWarrior Peru",         cl:703,    sg:54,  ft:13, dep:382,   ng:40,   co:225},
+  {aff:"dbbtwar",           ch:"BetWarrior Brazil",       cl:232,    sg:32,  ft:10, dep:144,   ng:87,   co:46},
+  {aff:"BCGLC25AR",         ch:"BetWarrior Argentina",    cl:513,    sg:13,  ft:8,  dep:97,    ng:46,   co:150},
+  {aff:"BCPLAY25AR",        ch:"BetWarrior Argentina",    cl:849,    sg:17,  ft:8,  dep:2893,  ng:1008, co:125},
+  {aff:"NorhstarBR",        ch:"BetWarrior Brazil",       cl:1262,   sg:100, ft:6,  dep:176,   ng:-24,  co:90},
+  {aff:"NorthstarARG",      ch:"BetWarrior Argentina",    cl:849,    sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"EonF_Holding",      ch:"BetWarrior Argentina",    cl:39,     sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"apuestasfree",      ch:"BetWarrior Peru",         cl:102,    sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"northstar",         ch:"BetWarrior Peru",         cl:322,    sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"ALPE01",            ch:"BetWarrior Peru",         cl:948,    sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"BCGLC24",           ch:"BetWarrior International",cl:0,      sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+  {aff:"365Scores",         ch:"BetWarrior Argentina",    cl:1000,   sg:0,   ft:0,  dep:0,     ng:0,    co:0},
+],
+};
+
+const fN  = n => Math.round(n).toLocaleString("es-AR");
+const fM  = n => "$"+Math.abs(Math.round(n)).toLocaleString("es-AR");
+const fS  = n => (n<0?"-$":"$")+Math.abs(Math.round(n)).toLocaleString("es-AR");
+const fP  = n => (!isFinite(n)||n===null)?"—":n.toFixed(1)+"%";
+const fR  = n => (!isFinite(n)||n===null)?"—":(n>=0?"+":"")+n.toFixed(1)+"%";
+const pct = (a,b) => b===0?null:(a-b)/Math.abs(b)*100;
+const roiCalc  = (ng,co) => co>0?(ng-co)/co*100:null;
+const roiMoney = (ng,co) => ng-co;
+const roiColor = v => v===null?"#777":v>=0?"#22c55e":"#ef4444";
+const sumRows  = rows => rows.reduce((a,r)=>({cl:a.cl+r.cl,sg:a.sg+r.sg,ft:a.ft+r.ft,dep:a.dep+r.dep,ng:a.ng+r.ng,co:a.co+r.co}),{cl:0,sg:0,ft:0,dep:0,ng:0,co:0});
+const getRows  = (mo,brand) => { const rows=(DATA[mo]||[]).filter(r=>r.cl>0||r.sg>0||r.ft>0); return brand==="ALL"?rows:rows.filter(r=>r.ch===brand); };
+const getMo    = (mo,brand) => brand==="ALL"?(MONTHLY[mo]||{cl:0,sg:0,ft:0,dep:0,ng:0,co:0}):sumRows(getRows(mo,brand));
+
+function Panel({children,style}){return <div style={{background:"#1a1a1a",border:"1px solid #2e2e2e",borderRadius:10,overflow:"hidden",marginBottom:14,...(style||{})}}>{children}</div>;}
+function PH({title,sub}){return <div style={{padding:"13px 18px",borderBottom:"1px solid #2e2e2e"}}><div style={{fontSize:14,fontWeight:800}}>{title}</div>{sub&&<div style={{fontSize:11,color:"#777",marginTop:2}}>{sub}</div>}</div>;}
+function Bar({val,max,color}){return <div style={{flex:1,background:"#2a2a2a",borderRadius:3,height:7,overflow:"hidden",margin:"0 8px"}}><div style={{width:`${Math.max(0,Math.min(100,val/Math.max(max,1)*100))}%`,height:"100%",background:color||"#E84200",borderRadius:3}}/></div>;}
+function Delta({curr,prev}){const d=pct(curr,prev);if(d===null||!isFinite(d))return null;const up=d>=0;return <span style={{fontSize:11,fontWeight:600,color:up?"#22c55e":"#ef4444",marginLeft:4}}>{up?"▲":"▼"}{Math.abs(d).toFixed(1)}%</span>;}
+function Pill({v}){const c=v>=20?"#22c55e":v>=10?"#eab308":"#ef4444";return <span style={{background:c+"22",color:c,padding:"1px 7px",borderRadius:10,fontSize:10,fontWeight:700}}>{fP(v)}</span>;}
+function KCard({label,val,prev,fmt,accent,valStyle}){const f=fmt||fN;return <div style={{background:"#1a1a1a",border:"1px solid #2e2e2e",borderRadius:10,padding:"12px 11px",borderTop:`3px solid ${accent||"#E84200"}`,flex:1,minWidth:90}}><div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"#777",marginBottom:3}}>{label}</div><div style={{fontFamily:"Georgia,serif",fontSize:20,lineHeight:1,marginBottom:5,color:"#f0f0f0",...(valStyle||{})}}>{f(val)}</div>{prev!==undefined&&<Delta curr={val} prev={prev}/>}</div>;}
+function STh({label,f,sort,setSort,align}){const active=sort.f===f;return <th onClick={()=>setSort(p=>({f,d:p.f===f&&p.d==="desc"?"asc":"desc"}))} style={{padding:"8px 10px",textAlign:align||"right",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.6,color:active?"#E84200":"#777",cursor:"pointer",whiteSpace:"nowrap",background:"#222",position:"sticky",top:0,zIndex:1,userSelect:"none"}}>{label}{active?(sort.d==="desc"?" ▼":" ▲"):" ⇅"}</th>;}
+
+const MDEFS={ft:{label:"Dep. 1°",color:"#E84200",fmt:fN},ng:{label:"NGR",color:"#22c55e",fmt:fS},dep:{label:"Depósitos",color:"#3b82f6",fmt:fM},sg:{label:"Registros",color:"#f97316",fmt:fN},co:{label:"Costo Afil.",color:"#a855f7",fmt:fM},cr:{label:"Tasa Conv.",color:"#ec4899",fmt:fP}};
+
+function TrendChart({brand}){
+  const ref=useRef(null);
+  const [metric,setMetric]=useState("ft");
+  const [tip,setTip]=useState(null);
+  const st=useRef({vals:[],pts:[],meta:null,bw:0,pad:null});
+  const draw=useCallback((hl=-1)=>{
+    const cv=ref.current;if(!cv)return;
+    const ctx=cv.getContext("2d"),W=cv.offsetWidth||600,H=160,dpr=window.devicePixelRatio||1;
+    cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+"px";cv.style.height=H+"px";ctx.scale(dpr,dpr);
+    const pad={l:62,r:16,t:16,b:30},meta=MDEFS[metric];
+    const vals=MONTHS.map(m=>{const d=getMo(m,brand);return metric==="cr"?(d.sg>0?d.ft/d.sg*100:0):d[metric]||0;});
+    const max=Math.max(...vals.map(v=>v<0?0:v),1),min=Math.min(...vals,0),range=max-min||1;
+    const iW=W-pad.l-pad.r,iH=H-pad.t-pad.b,bw=iW/MONTHS.length,zY=pad.t+iH*(max/range);
+    st.current={vals,meta,bw,pad};
+    for(let i=0;i<=4;i++){const y=pad.t+iH*(i/4),v=max-(range*i/4);ctx.strokeStyle="#2a2a2a";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();ctx.fillStyle="#555";ctx.font="9px sans-serif";ctx.textAlign="right";ctx.fillText(meta.fmt(v).slice(0,9),pad.l-5,y+3);}
+    const pts=[];
+    vals.forEach((v,i)=>{
+      const cx=pad.l+bw*i+bw/2,bh=Math.abs(v/range)*iH,by=v>=0?zY-bh:zY,x=pad.l+bw*i+bw*.18,bw2=bw*.64,isHl=hl===i;
+      const g=ctx.createLinearGradient(0,by,0,by+bh);g.addColorStop(0,meta.color+(isHl?"ff":"99"));g.addColorStop(1,meta.color+(isHl?"44":"11"));
+      ctx.fillStyle=v<0?(isHl?"#ef444499":"#ef444444"):g;ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,by,bw2,bh,[3,3,0,0]);else ctx.rect(x,by,bw2,bh);ctx.fill();
+      const cy=v>=0?zY-bh:zY+bh;pts.push({cx,cy});
+      ctx.fillStyle=isHl?"#f0f0f0":"#555";ctx.font=(isHl?"bold ":"")+"9px sans-serif";ctx.textAlign="center";ctx.fillText(SHORT[MONTHS[i]],cx,H-pad.b+14);
+    });
+    st.current.pts=pts;
+    ctx.strokeStyle=meta.color;ctx.lineWidth=2.5;ctx.lineJoin="round";ctx.lineCap="round";ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(p.cx,p.cy):ctx.lineTo(p.cx,p.cy));ctx.stroke();
+    pts.forEach((p,i)=>{const isHl=hl===i;ctx.beginPath();ctx.arc(p.cx,p.cy,isHl?7:5,0,Math.PI*2);ctx.fillStyle=meta.color;ctx.globalAlpha=hl>=0&&!isHl?0.4:1;ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=isHl?"#fff":"#0f0f0f";ctx.lineWidth=isHl?2.5:2;ctx.stroke();});
+  },[metric,brand]);
+  useEffect(()=>{draw();},[draw]);
+  const onMove=useCallback(e=>{
+    const cv=ref.current;if(!cv)return;
+    const rect=cv.getBoundingClientRect(),mx=e.clientX-rect.left;
+    const{pad,bw}=st.current;let idx=-1;
+    for(let i=0;i<MONTHS.length;i++){if(mx>=pad.l+bw*i&&mx<pad.l+bw*(i+1)){idx=i;break;}}
+    if(idx<0){setTip(null);draw(-1);return;}
+    draw(idx);
+    const{vals,meta}=st.current,v=vals[idx],pv=idx>0?vals[idx-1]:null,d=pv!==null?pct(v,pv):null,mo=MONTHS[idx],full=getMo(mo,brand);
+    setTip({x:e.clientX,y:e.clientY,mo,v,d,meta,f:{ft:full.ft,sg:full.sg,dep:full.dep,ng:full.ng,co:full.co,cr:full.sg>0?full.ft/full.sg*100:0,roi:roiCalc(full.ng,full.co),roiM:roiMoney(full.ng,full.co)}});
+  },[draw,brand]);
+  const onLeave=useCallback(()=>{setTip(null);draw(-1);},[draw]);
+  function Spark({mk,color}){
+    const vals=MONTHS.map(m=>{const d=getMo(m,brand);return mk==="cr"?(d.sg>0?d.ft/d.sg*100:0):d[mk]||0;});
+    const max=Math.max(...vals,1),min=Math.min(...vals,0),rng=max-min||1,W2=180,H2=24;
+    const pts=vals.map((v,i)=>`${i/(vals.length-1)*W2},${H2-((v-min)/rng*(H2-4))-2}`).join(" ");
+    const last=getMo(MONTHS[MONTHS.length-1],brand),lv=mk==="cr"?(last.sg>0?last.ft/last.sg*100:0):last[mk]||0;
+    return <div onClick={()=>setMetric(mk)} style={{display:"flex",alignItems:"center",gap:10,marginBottom:11,cursor:"pointer"}}>
+      <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.6,color,width:62,flexShrink:0}}>{MDEFS[mk].label}</div>
+      <svg width="100%" height={H2} viewBox={`0 0 ${W2} ${H2}`} style={{flex:1}}><polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/></svg>
+      <div style={{fontSize:12,fontWeight:700,color,width:72,textAlign:"right"}}>{MDEFS[mk].fmt(lv)}</div>
+    </div>;
+  }
+  return <div>
+    <div style={{padding:"13px 18px",borderBottom:"1px solid #2e2e2e",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+      <div><div style={{fontSize:14,fontWeight:800}}>Tendencias Mensuales</div><div style={{fontSize:11,color:"#777",marginTop:2}}>Nov 2025 → Actual · hover para detalles</div></div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{Object.entries(MDEFS).map(([k,m])=><button key={k} onClick={()=>setMetric(k)} style={{padding:"4px 11px",borderRadius:6,border:"none",fontSize:12,fontWeight:600,background:k===metric?m.color+"33":"#222",color:k===metric?m.color:"#666"}}>{m.label}</button>)}</div>
+    </div>
+    <div style={{padding:"16px 20px 4px",position:"relative"}}>
+      <canvas ref={ref} height={160} style={{width:"100%",cursor:"crosshair"}} onMouseMove={onMove} onMouseLeave={onLeave}/>
+      {tip&&<div style={{position:"fixed",left:Math.min(tip.x+14,window.innerWidth-220),top:Math.min(tip.y-20,window.innerHeight-300),background:"#1e1e1e",border:"1px solid #E84200",borderRadius:10,padding:"12px 14px",minWidth:200,zIndex:9999,boxShadow:"0 8px 32px rgba(0,0,0,.6)",pointerEvents:"none"}}>
+        <div style={{fontWeight:800,fontSize:13,color:"#E84200",borderBottom:"1px solid #2e2e2e",paddingBottom:6,marginBottom:8}}>{SHORT[tip.mo]}</div>
+        <div style={{fontSize:16,fontWeight:800,color:tip.meta.color,marginBottom:4}}>{tip.meta.fmt(tip.v)}</div>
+        {tip.d!==null&&<div style={{fontSize:11,fontWeight:600,color:tip.d>=0?"#22c55e":"#ef4444",marginBottom:8}}>{tip.d>=0?"▲":"▼"}{Math.abs(tip.d).toFixed(1)}% vs mes ant.</div>}
+        <div style={{borderTop:"1px solid #2a2a2a",paddingTop:8,display:"flex",flexDirection:"column",gap:3}}>
+          {[["Dep. 1°",fN(tip.f.ft),"#E84200"],["Registros",fN(tip.f.sg),"#f97316"],["Tasa Conv.",fP(tip.f.cr),"#ec4899"],["Depósitos",fM(tip.f.dep),"#3b82f6"],["NGR",fS(tip.f.ng),tip.f.ng>=0?"#22c55e":"#ef4444"],["Costo Afil.",fM(tip.f.co),"#a855f7"],["ROI %",fR(tip.f.roi),roiColor(tip.f.roi)],["ROI $",fS(tip.f.roiM),roiColor(tip.f.roiM)]].map(([l,v,c])=>(
+            <div key={l} style={{display:"flex",justifyContent:"space-between",gap:16}}><span style={{fontSize:11,color:"#777"}}>{l}</span><span style={{fontSize:11,fontWeight:600,color:c}}>{v}</span></div>
+          ))}
+        </div>
+      </div>}
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderTop:"1px solid #2e2e2e"}}>
+      <div style={{padding:"14px 18px"}}>{[["ft","#E84200"],["ng","#22c55e"],["dep","#3b82f6"]].map(([k,c])=><Spark key={k} mk={k} color={c}/>)}</div>
+      <div style={{padding:"14px 18px",borderLeft:"1px solid #2e2e2e"}}>{[["sg","#f97316"],["co","#a855f7"],["cr","#ec4899"]].map(([k,c])=><Spark key={k} mk={k} color={c}/>)}</div>
+    </div>
+  </div>;
+}
+
+function PasswordScreen({onUnlock}){
+  const [val,setVal]=useState(""),[err,setErr]=useState(false),inp=useRef(null);
+  useEffect(()=>{inp.current&&inp.current.focus();},[]);
+  const go=()=>{if(val.trim()===PASSWORD){onUnlock();}else{setErr(true);setVal("");setTimeout(()=>setErr(false),1500);}};
+  return <div style={{minHeight:"100vh",background:"#0f0f0f",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+    <div style={{textAlign:"center",marginBottom:32}}>
+      <div style={{width:60,height:60,background:"#E84200",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,fontWeight:900,color:"#fff",fontStyle:"italic",fontFamily:"Georgia,serif",margin:"0 auto 14px"}}>W</div>
+      <div style={{fontSize:26,fontWeight:900,color:"#fff",letterSpacing:-.5}}>BetWarrior</div>
+      <div style={{fontSize:13,color:"#777",marginTop:4}}>Panel de Afiliados</div>
+    </div>
+    <div style={{background:"#1a1a1a",border:`1px solid ${err?"#ef4444":"#2e2e2e"}`,borderRadius:14,padding:"32px 40px",width:320,textAlign:"center"}}>
+      <div style={{fontSize:13,color:"#777",marginBottom:18}}>Ingresá tu contraseña de acceso</div>
+      <input ref={inp} type="password" value={val} onChange={e=>setVal(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Contraseña"
+        style={{width:"100%",background:"#111",border:`1px solid ${err?"#ef4444":"#2e2e2e"}`,borderRadius:8,padding:"11px 14px",fontSize:14,color:"#f0f0f0",outline:"none",marginBottom:12,fontFamily:"inherit",boxSizing:"border-box"}}/>
+      {err&&<div style={{fontSize:12,color:"#ef4444",marginBottom:10}}>Contraseña incorrecta. Intentá de nuevo.</div>}
+      <button onClick={go} style={{width:"100%",background:"#E84200",color:"#fff",border:"none",borderRadius:8,padding:"11px",fontSize:14,fontWeight:700}}>INGRESAR AL PANEL</button>
+    </div>
+    <div style={{marginTop:18,fontSize:11,color:"#444"}}>Protegido · BetWarrior 2026</div>
+  </div>;
+}
+
+function App(){
+  const [unlocked,setUnlocked]=useState(false);
+  const [tab,setTab]=useState("overview");
+  const [mo,setMo]=useState("April 2026");
+  const [brand,setBrand]=useState("ALL");
+  const [pSort,setPSort]=useState({f:"ft",d:"desc"});
+  const [tBrand,setTBrand]=useState("ALL");
+
+  if(!unlocked) return <PasswordScreen onUnlock={()=>setUnlocked(true)}/>;
+
+  const idx=MONTHS.indexOf(mo),curr=getMo(mo,brand),prevD=idx>0?getMo(MONTHS[idx-1],brand):null;
+  const currROI=roiCalc(curr.ng,curr.co),currCR=curr.sg>0?curr.ft/curr.sg*100:0;
+  const prevROI=prevD?roiCalc(prevD.ng,prevD.co):undefined,prevCR=prevD&&prevD.sg>0?prevD.ft/prevD.sg*100:undefined;
+  const COLS=["#E84200","#ff7040","#ff9a6a","#3b82f6","#06b6d4","#22c55e","#a855f7","#eab308","#ec4899","#f97316"];
+  const TABS=[["overview","Resumen"],["partner","Análisis de Partners"],["geo","GEO / Marca"],["trends","Tendencias"]];
+
+  const partnerRows=(()=>{
+    let rows=getRows(mo,brand).map(r=>({...r,cr:r.sg>0?r.ft/r.sg*100:0,roi:roiCalc(r.ng,r.co),roiM:roiMoney(r.ng,r.co)}));
+    const{f,d}=pSort;
+    return rows.sort((a,b)=>{let av=a[f]??-Infinity,bv=b[f]??-Infinity;if(typeof av==="string"){av=av.toLowerCase();bv=bv.toLowerCase();}return d==="desc"?(bv>av?1:-1):(av>bv?1:-1);});
+  })();
+  const pTot=sumRows(partnerRows),pROI=roiCalc(pTot.ng,pTot.co),pROIM=roiMoney(pTot.ng,pTot.co);
+  const topP=[...getRows(mo,brand)].sort((a,b)=>b.ft-a.ft).slice(0,10),maxFT=Math.max(...topP.map(r=>r.ft),1);
+
+  const affByBrand={};
+  MONTHS.forEach(m=>(DATA[m]||[]).forEach(r=>{if(!affByBrand[r.ch])affByBrand[r.ch]={};if(!affByBrand[r.ch][r.aff])affByBrand[r.ch][r.aff]={ft:0,ng:0,dep:0,sg:0,cl:0,co:0};const a=affByBrand[r.ch][r.aff];a.ft+=r.ft;a.ng+=r.ng;a.dep+=r.dep;a.sg+=r.sg;a.cl+=r.cl;a.co+=r.co;}));
+
+  const tRows=MONTHS.map(m=>{const v=tBrand==="ALL"?getMo(m,"ALL"):sumRows(getRows(m,tBrand));return{...v,mo:m,cr:v.sg>0?v.ft/v.sg*100:0,roi:roiCalc(v.ng,v.co),roiM:roiMoney(v.ng,v.co)};});
+  const td=(val,st)=><td style={{padding:"8px 10px",textAlign:"right",fontVariantNumeric:"tabular-nums",...(st||{})}}>{val}</td>;
+
+  return <div style={{minHeight:"100vh",background:"#0f0f0f",color:"#f0f0f0",fontFamily:"'DM Sans',system-ui,sans-serif",fontSize:14}}>
+    <div style={{background:"#1a1a1a",borderBottom:"1px solid #2e2e2e",padding:"11px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
+      <div style={{display:"flex",alignItems:"center",gap:11}}>
+        <div style={{width:38,height:38,background:"#E84200",borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,fontWeight:900,color:"#fff",fontStyle:"italic",fontFamily:"Georgia,serif"}}>W</div>
+        <div><div style={{fontSize:17,fontWeight:900,letterSpacing:-.5}}>BetWarrior</div><div style={{fontSize:11,color:"#777"}}>Panel de Afiliados</div></div>
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <span style={{background:"#1a2e1a",color:"#22c55e",border:"1px solid #22c55e44",padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>● Activo</span>
+        <select value={mo} onChange={e=>setMo(e.target.value)}>{[...MONTHS].reverse().map(m=><option key={m} value={m}>{MO_ES[m]}</option>)}</select>
+        <select value={brand} onChange={e=>setBrand(e.target.value)}><option value="ALL">Todas las Marcas</option>{BRANDS.map(b=><option key={b} value={b}>{b}</option>)}</select>
+      </div>
+    </div>
+    <div style={{background:"#1a1a1a",borderBottom:"1px solid #2e2e2e",padding:"0 22px",display:"flex",gap:2}}>
+      {TABS.map(([t,l])=><div key={t} onClick={()=>setTab(t)} style={{padding:"9px 16px",cursor:"pointer",fontSize:13,fontWeight:600,borderBottom:`2px solid ${tab===t?"#E84200":"transparent"}`,color:tab===t?"#E84200":"#777"}}>{l}</div>)}
+    </div>
+    <div style={{padding:"18px 20px"}}>
+      <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>
+        <KCard label="Dep. 1°"     val={curr.ft}  prev={prevD&&prevD.ft}  accent="#E84200"/>
+        <KCard label="Registros"   val={curr.sg}  prev={prevD&&prevD.sg}  accent="#f97316"/>
+        <KCard label="Tasa Conv."  val={currCR}   prev={prevCR}           fmt={fP} accent="#eab308"/>
+        <KCard label="Depósitos"   val={curr.dep} prev={prevD&&prevD.dep} fmt={fM} accent="#3b82f6"/>
+        <KCard label="NGR"         val={curr.ng}  prev={prevD&&prevD.ng}  fmt={fS} accent="#22c55e" valStyle={{color:curr.ng>=0?"#22c55e":"#ef4444"}}/>
+        <KCard label="Costo Afil." val={curr.co}  prev={prevD&&prevD.co}  fmt={fM} accent="#a855f7"/>
+        <KCard label="ROI %"       val={currROI}  prev={prevROI}          fmt={fR} accent="#ec4899" valStyle={{color:roiColor(currROI)}}/>
+        <KCard label="ROI $"       val={roiMoney(curr.ng,curr.co)} prev={prevD?roiMoney(prevD.ng,prevD.co):undefined} fmt={fS} accent="#ec4899" valStyle={{color:roiColor(roiMoney(curr.ng,curr.co))}}/>
+        <KCard label="Clics"       val={curr.cl}  prev={prevD&&prevD.cl}  accent="#06b6d4"/>
+      </div>
+
+      {tab==="overview"&&<div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+          <Panel>
+            <PH title="Top Partners · Dep. 1°" sub={`${MO_ES[mo]} · ${brand==="ALL"?"Todas las Marcas":brand}`}/>
+            <div style={{padding:"14px 18px"}}>
+              {topP.map((r,i)=><div key={r.aff+r.ch} style={{display:"flex",alignItems:"center",marginBottom:9}}>
+                <div style={{width:20,height:20,background:i<3?"#E84200":"#2a2a2a",borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,marginRight:8,flexShrink:0}}>{i+1}</div>
+                <div style={{flex:1,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.aff}</div>
+                <Bar val={r.ft} max={maxFT} color={COLS[i]}/>
+                <div style={{fontSize:12,fontWeight:700,color:COLS[i],width:28,textAlign:"right"}}>{r.ft}</div>
+              </div>)}
+            </div>
+          </Panel>
+          <Panel>
+            <PH title="Rendimiento por Marca" sub="Todos los meses combinados"/>
+            <div style={{padding:"14px 18px"}}>
+              {Object.entries(BY_BRAND).sort((a,b)=>b[1].ft-a[1].ft).map(([b,v])=>{
+                const mxB=Math.max(...Object.values(BY_BRAND).map(x=>x.ft),1);
+                return <div key={b} style={{marginBottom:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4,flexWrap:"wrap",gap:4}}>
+                    <span style={{fontSize:12,fontWeight:700,color:BCOLS[b]}}>{b.replace("BetWarrior ","")}</span>
+                    <span style={{fontSize:11,color:"#777"}}>Dep.1°:{fN(v.ft)} · NGR:{fS(v.ng)} · ROI:{fR(roiCalc(v.ng,v.co))}</span>
+                  </div>
+                  <div style={{background:"#2a2a2a",borderRadius:3,height:7,overflow:"hidden"}}><div style={{width:`${v.ft/mxB*100}%`,height:"100%",background:BCOLS[b],borderRadius:3}}/></div>
+                </div>;
+              })}
+            </div>
+          </Panel>
+        </div>
+        <Panel><TrendChart brand={brand}/></Panel>
+      </div>}
+
+      {tab==="partner"&&<Panel>
+        <PH title="Rendimiento de Partners" sub={`${MO_ES[mo]} · ${brand==="ALL"?"Todas las Marcas":brand} · ${partnerRows.length} partners`}/>
+        <div style={{overflow:"auto",maxHeight:580}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1020}}>
+            <thead><tr>
+              <th style={{padding:"8px 10px",textAlign:"left",fontSize:10,fontWeight:700,textTransform:"uppercase",color:"#777",background:"#222",position:"sticky",top:0,zIndex:2}}>#</th>
+              <STh label="Partner"     f="aff"  sort={pSort} setSort={setPSort} align="left"/>
+              <STh label="Marca"       f="ch"   sort={pSort} setSort={setPSort}/>
+              <STh label="Clics"       f="cl"   sort={pSort} setSort={setPSort}/>
+              <STh label="Registros"   f="sg"   sort={pSort} setSort={setPSort}/>
+              <STh label="Dep. 1°"     f="ft"   sort={pSort} setSort={setPSort}/>
+              <STh label="Tasa Conv."  f="cr"   sort={pSort} setSort={setPSort}/>
+              <STh label="Depósitos"   f="dep"  sort={pSort} setSort={setPSort}/>
+              <STh label="NGR"         f="ng"   sort={pSort} setSort={setPSort}/>
+              <STh label="Costo Afil." f="co"   sort={pSort} setSort={setPSort}/>
+              <STh label="ROI %"       f="roi"  sort={pSort} setSort={setPSort}/>
+              <STh label="ROI $"       f="roiM" sort={pSort} setSort={setPSort}/>
+            </tr></thead>
+            <tbody>
+              {partnerRows.map((r,i)=><tr key={r.aff+r.ch} style={{borderBottom:"1px solid #2e2e2e",background:i%2===0?"transparent":"#161616"}}>
+                <td style={{padding:"8px 10px",color:"#555",fontSize:11}}>{i+1}</td>
+                <td style={{padding:"8px 10px",fontWeight:600,whiteSpace:"nowrap"}}>{r.aff}</td>
+                <td style={{padding:"8px 10px",textAlign:"right"}}><span style={{background:"#2a2a2a",color:"#777",padding:"1px 6px",borderRadius:5,fontSize:10}}>{BRAND_SHORT[r.ch]||r.ch}</span></td>
+                {td(fN(r.cl))}{td(fN(r.sg))}
+                <td style={{padding:"8px 10px",textAlign:"right",fontWeight:700,color:"#E84200"}}>{r.ft}</td>
+                <td style={{padding:"8px 10px",textAlign:"right"}}><Pill v={r.cr}/></td>
+                {td(fM(r.dep))}
+                <td style={{padding:"8px 10px",textAlign:"right",color:r.ng>=0?"#22c55e":"#ef4444",fontVariantNumeric:"tabular-nums"}}>{fS(r.ng)}</td>
+                {td(r.co>0?fM(r.co):"—")}
+                <td style={{padding:"8px 10px",textAlign:"right",color:roiColor(r.roi)}}>{fR(r.roi)}</td>
+                <td style={{padding:"8px 10px",textAlign:"right",color:roiColor(r.roiM),fontVariantNumeric:"tabular-nums"}}>{fS(r.roiM)}</td>
+              </tr>)}
+            </tbody>
+            <tfoot><tr style={{borderTop:"2px solid #E84200",background:"#222",position:"sticky",bottom:0}}>
+              <td colSpan={2} style={{padding:"9px 10px",fontWeight:700,fontSize:10,color:"#E84200",textTransform:"uppercase"}}>Σ Total</td>
+              <td style={{padding:"9px 10px",textAlign:"right"}}>—</td>
+              {td(fN(pTot.cl),{fontWeight:700})}{td(fN(pTot.sg),{fontWeight:700})}
+              <td style={{padding:"9px 10px",textAlign:"right",fontWeight:700,color:"#E84200"}}>{fN(pTot.ft)}</td>
+              <td style={{padding:"9px 10px",textAlign:"right",fontWeight:700}}><Pill v={pTot.sg>0?pTot.ft/pTot.sg*100:0}/></td>
+              {td(fM(pTot.dep),{fontWeight:700})}
+              <td style={{padding:"9px 10px",textAlign:"right",fontWeight:700,color:pTot.ng>=0?"#22c55e":"#ef4444"}}>{fS(pTot.ng)}</td>
+              {td(fM(pTot.co),{fontWeight:700})}
+              <td style={{padding:"9px 10px",textAlign:"right",fontWeight:700,color:roiColor(pROI)}}>{fR(pROI)}</td>
+              <td style={{padding:"9px 10px",textAlign:"right",fontWeight:700,color:roiColor(pROIM)}}>{fS(pROIM)}</td>
+            </tr></tfoot>
+          </table>
+        </div>
+      </Panel>}
+
+      {tab==="geo"&&<div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+          {Object.entries(BY_BRAND).map(([b,v])=>{const rv=roiCalc(v.ng,v.co);return <div key={b} style={{background:"#1a1a1a",border:"1px solid #2e2e2e",borderTop:`3px solid ${BCOLS[b]}`,borderRadius:10,padding:"13px 16px"}}>
+            <div style={{fontSize:13,fontWeight:800,color:BCOLS[b],marginBottom:10}}>{b.replace("BetWarrior ","")}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {[["Dep. 1°",fN(v.ft),"#E84200"],["Registros",fN(v.sg),"#f97316"],["Clics",fN(v.cl),"#06b6d4"],["NGR",fS(v.ng),v.ng>=0?"#22c55e":"#ef4444"],["Depósitos",fM(v.dep),"#3b82f6"],["ROI %",fR(rv),roiColor(rv)],["ROI $",fS(v.ng-v.co),roiColor(v.ng-v.co)]].map(([l,val,c])=>(
+                <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:10,color:"#777",textTransform:"uppercase",letterSpacing:.4}}>{l}</span>
+                  <span style={{fontWeight:700,fontSize:13,color:c}}>{val}</span>
+                </div>
+              ))}
+            </div>
+          </div>;})}
+        </div>
+        <Panel>
+          <PH title="Top Partners por Marca" sub="Últimos 6 meses · Dep. 1°, Registros, Clics y ROI"/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr"}}>
+            {BRANDS.map((b,bi)=>{
+              const affs=Object.entries(affByBrand[b]||{}).sort((a,c)=>c[1].ft-a[1].ft).slice(0,8),mxF=Math.max(...affs.map(a=>a[1].ft),1),col=BCOLS[b];
+              return <div key={b} style={{padding:"16px 18px",borderRight:bi%2===0?"1px solid #2e2e2e":"none",borderBottom:"1px solid #2e2e2e"}}>
+                <div style={{fontSize:13,fontWeight:800,color:col,marginBottom:10}}>{b.replace("BetWarrior ","")}</div>
+                {affs.length===0&&<div style={{color:"#777",fontSize:12}}>Sin datos</div>}
+                {affs.map(([a,v],i)=>{const rv=roiCalc(v.ng,v.co);return <div key={a} style={{marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",marginBottom:3}}>
+                    <div style={{width:16,fontSize:10,color:"#555",marginRight:6,flexShrink:0}}>{i+1}</div>
+                    <div style={{flex:1,fontSize:11,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a}</div>
+                    <Bar val={v.ft} max={mxF} color={col}/>
+                    <div style={{fontSize:11,fontWeight:700,color:col,width:28,textAlign:"right"}}>{v.ft}</div>
+                  </div>
+                  <div style={{paddingLeft:22,display:"flex",gap:12,flexWrap:"wrap"}}>
+                    {[["Reg.",fN(v.sg),"#f97316"],["Clics",fN(v.cl),"#06b6d4"],["ROI%",fR(rv),roiColor(rv)],["ROI$",fS(v.ng-v.co),roiColor(v.ng-v.co)]].map(([l,val,c])=>(
+                      <span key={l} style={{fontSize:10,color:c}}><span style={{color:"#555"}}>{l}:</span> {val}</span>
+                    ))}
+                  </div>
+                </div>;})}
+              </div>;
+            })}
+          </div>
+        </Panel>
+      </div>}
+
+      {tab==="trends"&&<div>
+        <Panel>
+          <div style={{padding:"13px 18px",borderBottom:"1px solid #2e2e2e",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+            <div><div style={{fontSize:14,fontWeight:800}}>Resultados Mensuales Completos</div><div style={{fontSize:11,color:"#777",marginTop:2}}>Todas las métricas con variación mensual</div></div>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{["ALL",...BRANDS].map(b=>{const lbl=b==="ALL"?"Todos":BRAND_SHORT[b]||b;return <button key={b} onClick={()=>setTBrand(b)} style={{padding:"4px 11px",borderRadius:6,border:"none",fontSize:12,fontWeight:600,background:tBrand===b?"#E84200":"#222",color:tBrand===b?"#fff":"#777"}}>{lbl}</button>;})}</div>
+          </div>
+          <div style={{overflow:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:860}}>
+              <thead><tr style={{background:"#222"}}>
+                {["Mes","Clics","Registros","Dep. 1°","Tasa Conv.","Depósitos","NGR","Costo Afil.","ROI %","ROI $"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:h==="Mes"?"left":"right",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.6,color:"#777",whiteSpace:"nowrap",position:"sticky",top:0,background:"#222"}}>{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {tRows.map((v,i)=>{
+                  const p=i>0?tRows[i-1]:null,isMTD=v.mo==="April 2026";
+                  const mom=(c,pv)=>{if(!p||pv===undefined)return null;const d=pct(c,pv);if(d===null||!isFinite(d))return null;const up=d>=0;return <span style={{fontSize:10,fontWeight:600,color:up?"#22c55e":"#ef4444",marginLeft:3}}>{up?"▲":"▼"}{Math.abs(d).toFixed(1)}%</span>;};
+                  return <tr key={v.mo} style={{borderBottom:"1px solid #2e2e2e",background:isMTD?"rgba(232,66,0,.07)":"transparent"}}>
+                    <td style={{padding:"9px 12px",fontWeight:isMTD?700:400,whiteSpace:"nowrap"}}>{SHORT[v.mo]}{isMTD&&<span style={{marginLeft:6,fontSize:9,color:"#E84200",fontWeight:700}}>MTD</span>}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{fN(v.cl)}{mom(v.cl,p&&p.cl)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{fN(v.sg)}{mom(v.sg,p&&p.sg)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,color:"#E84200",fontVariantNumeric:"tabular-nums"}}>{fN(v.ft)}{mom(v.ft,p&&p.ft)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right"}}>{fP(v.cr)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{fM(v.dep)}{mom(v.dep,p&&p.dep)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",color:v.ng>=0?"#22c55e":"#ef4444",fontVariantNumeric:"tabular-nums"}}>{fS(v.ng)}{mom(v.ng,p&&p.ng)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",fontVariantNumeric:"tabular-nums"}}>{fM(v.co)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",color:roiColor(v.roi)}}>{fR(v.roi)}</td>
+                    <td style={{padding:"9px 12px",textAlign:"right",color:roiColor(v.roiM),fontVariantNumeric:"tabular-nums"}}>{fS(v.roiM)}{mom(v.roiM,p&&p.roiM)}</td>
+                  </tr>;
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+          {[["Dep. 1°","ft","#E84200",fN],["NGR","ng","#22c55e",fS],["Depósitos","dep","#3b82f6",fM],["ROI $","roiM","#ec4899",fS]].map(([label,key,color,fmt])=>(
+            <Panel key={label}>
+              <PH title={`${label} — Mensual`}/>
+              <div style={{padding:"14px 18px"}}>
+                {tRows.map(v=>{const val=v[key],maxV=Math.max(...tRows.map(r=>Math.abs(r[key])),1),c=val<0?"#ef4444":color;return(
+                  <div key={v.mo} style={{display:"flex",alignItems:"center",marginBottom:8,gap:8}}>
+                    <div style={{width:54,fontSize:10,color:"#777",flexShrink:0}}>{SHORT[v.mo]}</div>
+                    <div style={{flex:1,background:"#2a2a2a",borderRadius:3,height:7,overflow:"hidden"}}><div style={{width:`${Math.abs(val)/maxV*100}%`,height:"100%",background:c,borderRadius:3}}/></div>
+                    <div style={{fontSize:11,fontWeight:600,color:c,width:70,textAlign:"right"}}>{fmt(val)}</div>
+                  </div>
+                );})}
+              </div>
+            </Panel>
+          ))}
+        </div>
+      </div>}
+    </div>
+    <div style={{textAlign:"center",padding:14,color:"#444",fontSize:11,borderTop:"1px solid #2e2e2e"}}>BetWarrior · Panel de Afiliados · Datos actualizados Abril 2026</div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
